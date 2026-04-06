@@ -1,0 +1,8 @@
+<resources>
+  <style name="Theme.Vinyl" parent="@android:style/Theme.DeviceDefault.NoActionBar">
+    <item name="android:statusBarColor">@android:color/transparent</item>
+    <item name="android:navigationBarColor">#F6FAFF</item>
+    <item name="android:windowBackground">#E9F3FF</item>
+    <item name="android:windowLightStatusBar">true</item>
+  </style>
+</resources>
