@@ -139,8 +139,12 @@ fun PlaylistDetailScreen(
     val tracks = state.playlist?.tracks ?: return@LaunchedEffect
     val targetIndex = tracks.indexOfFirst { it.id == targetTrackId }
     if (targetIndex < 0) return@LaunchedEffect
-    val isVisible = listState.layoutInfo.visibleItemsInfo.any { it.index == targetIndex }
-    if (!isVisible) {
+    val targetItem = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == targetIndex }
+    val isFullyVisible =
+      targetItem != null &&
+        targetItem.offset >= listState.layoutInfo.viewportStartOffset &&
+        targetItem.offset + targetItem.size <= listState.layoutInfo.viewportEndOffset
+    if (!isFullyVisible) {
       listState.animateScrollToItem(targetIndex)
     }
   }
