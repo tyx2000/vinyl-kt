@@ -1,55 +1,19 @@
-# Vinyl Android Native
+# LocalA Android Native
 
-This sibling project is the native Android rewrite target for the current Expo app.
+`LocalA` is a local audio player for Android.
 
-## Directory structure
+Its purpose is to let users manage and play audio files that already exist on the device, without relying on an online music service.
 
-```text
-vinyl-android/
-  app/
-    src/main/java/com/tyxu4459/expovinyl/
-      data/
-        local/
-          dao/
-          entity/
-        repository/
-      di/
-      feature/
-        library/
-        player/
-        playlist/
-      media/
-      model/
-      navigation/
-      ui/theme/
-```
+## Main features
 
-## Room tables
-
-- `playlists`
-  - `id TEXT PRIMARY KEY`
-  - `name TEXT NOT NULL`
-  - `created_at INTEGER NOT NULL`
-- `tracks`
-  - `id INTEGER PRIMARY KEY AUTOINCREMENT`
-  - `uri TEXT NOT NULL UNIQUE`
-  - `display_name TEXT NOT NULL`
-  - `artist TEXT`
-  - `album TEXT`
-  - `duration_ms INTEGER`
-  - `imported_at INTEGER NOT NULL`
-- `playlist_tracks`
-  - `playlist_id TEXT NOT NULL`
-  - `track_id INTEGER NOT NULL`
-  - `sort_order INTEGER NOT NULL`
-  - composite primary key: `(playlist_id, track_id)`
-- `playback_snapshot`
-  - singleton row keyed by `id = 0`
-  - stores current `playlist_id`, `track_id`, `queue_index`, `position_ms`, `is_playing`, `play_mode`, `sleep_timer_ends_at`
-
-## Initial migration path
-
-1. Replace Expo local storage with Room repositories.
-2. Replace `expo-audio` and the custom lock screen bridge with `Media3 + MediaSessionService`.
-3. Move mini player and page state into `ViewModel + StateFlow`.
-4. Add file import flow with `OpenMultipleDocuments`.
+- Create playlists manually
+- Import local audio files into playlists
+- Scan device audio and group tracks by album
+- Put tracks without valid album metadata into `Unknown Album`
+- Use file names as track display names when scanning local media
+- Play audio with previous / play / pause / next controls
+- Seek within the current track
+- Support `Loop` and `Single` play modes
+- Support a sleep timer
+- Preserve playback position and playlist state when reopening the app
+- Show notification and lock-screen playback controls
