@@ -14,6 +14,7 @@ interface LibraryRepository {
   fun observePlaylistDetail(playlistId: String): Flow<PlaylistDetail?>
   suspend fun getPlaylistDetail(playlistId: String): PlaylistDetail?
   suspend fun createPlaylist(name: String)
+  suspend fun scanDeviceAudioToAlbums()
   suspend fun removePlaylist(playlistId: String)
   suspend fun importTracks(
     playlistId: String,

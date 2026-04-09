@@ -13,6 +13,7 @@ import com.tyxu4459.expovinyl.model.PlaybackSnapshot
 import com.tyxu4459.expovinyl.model.PlaylistDetail
 import com.tyxu4459.expovinyl.model.PlaylistSummary
 import com.tyxu4459.expovinyl.model.Track
+import com.tyxu4459.expovinyl.platform.file.DeviceAudioScanner
 import com.tyxu4459.expovinyl.platform.file.TrackImportManager
 import java.io.File
 import java.util.Locale
@@ -27,6 +28,7 @@ import kotlinx.coroutines.flow.map
 @Singleton
 class RoomLibraryRepository @Inject constructor(
   private val playlistDao: PlaylistDao,
+  private val deviceAudioScanner: DeviceAudioScanner,
   private val trackImportManager: TrackImportManager,
 ) : LibraryRepository {
   override fun observePlaylists(): Flow<List<PlaylistSummary>> =
@@ -76,6 +78,25 @@ class RoomLibraryRepository @Inject constructor(
     )
   }
 
+  override suspend fun scanDeviceAudioToAlbums() {
+    val albumGroups = deviceAudioScanner.scanAlbums()
+    albumGroups.forEach { (albumName, tracks) ->
+      val playlistId =
+        playlistDao.findPlaylistByName(albumName)?.id ?: "p-${UUID.randomUUID()}".also { id ->
+          playlistDao.upsertPlaylist(
+            PlaylistEntity(
+              id = id,
+              name = albumName,
+              createdAt = System.currentTimeMillis(),
+            ),
+          )
+        }
+      tracks.forEach { track ->
+        addTrackToPlaylist(playlistId, track)
+      }
+    }
+  }
+
   override suspend fun removePlaylist(playlistId: String) {
     val playlist = getPlaylistDetail(playlistId) ?: return
     playlist.tracks.forEach { track ->
@@ -110,22 +131,31 @@ class RoomLibraryRepository @Inject constructor(
   }
 
   override suspend fun addTrackToPlaylist(playlistId: String, track: Track) {
-    if (
-      playlistDao.playlistContainsSignature(
-        playlistId = playlistId,
-        displayName = track.displayName,
-        durationMs = track.durationMs,
-      )
-    ) {
+    val useUriMatchingOnly = track.uri.startsWith("content://")
+    val alreadyInPlaylist =
+      if (useUriMatchingOnly) {
+        playlistDao.playlistContainsUri(playlistId, track.uri)
+      } else {
+        playlistDao.playlistContainsSignature(
+          playlistId = playlistId,
+          displayName = track.displayName,
+          durationMs = track.durationMs,
+        )
+      }
+    if (alreadyInPlaylist) {
       deleteManagedFile(track.uri)
       return
     }
 
     val existingTrack =
-      playlistDao.findTrackBySignature(
-        displayName = track.displayName,
-        durationMs = track.durationMs,
-      )
+      if (useUriMatchingOnly) {
+        playlistDao.findTrackByUri(track.uri)
+      } else {
+        playlistDao.findTrackByUri(track.uri) ?: playlistDao.findTrackBySignature(
+          displayName = track.displayName,
+          durationMs = track.durationMs,
+        )
+      }
 
     if (existingTrack != null) {
       playlistDao.insertPlaylistTrack(
@@ -165,6 +195,7 @@ class RoomLibraryRepository @Inject constructor(
 
   private fun deleteManagedFile(uri: String?) {
     if (uri.isNullOrBlank()) return
+    if (!uri.startsWith("file://")) return
     val path = uri.removePrefix("file://")
     runCatching {
       File(path).takeIf { it.exists() }?.delete()

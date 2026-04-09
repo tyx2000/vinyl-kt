@@ -69,6 +69,9 @@ interface PlaylistDao {
   @Query("SELECT * FROM playlists WHERE id = :playlistId LIMIT 1")
   suspend fun getPlaylist(playlistId: String): PlaylistEntity?
 
+  @Query("SELECT * FROM playlists WHERE name = :name LIMIT 1")
+  suspend fun findPlaylistByName(name: String): PlaylistEntity?
+
   @Query("SELECT COALESCE(MAX(sort_order), -1) + 1 FROM playlist_tracks WHERE playlist_id = :playlistId")
   suspend fun getNextSortOrder(playlistId: String): Int
 
@@ -117,6 +120,21 @@ interface PlaylistDao {
     playlistId: String,
     displayName: String,
     durationMs: Long?,
+  ): Boolean
+
+  @Query(
+    """
+    SELECT EXISTS(
+      SELECT 1 FROM tracks t
+      JOIN playlist_tracks pt ON pt.track_id = t.id
+      WHERE pt.playlist_id = :playlistId
+        AND t.uri = :uri
+    )
+    """,
+  )
+  suspend fun playlistContainsUri(
+    playlistId: String,
+    uri: String,
   ): Boolean
 
   @Insert(onConflict = OnConflictStrategy.REPLACE)

@@ -1,6 +1,6 @@
 <resources>
-  <string name="app_name">Vinyl</string>
-  <string name="default_notification_channel_name">Vinyl Player</string>
+  <string name="app_name">LocalA</string>
+  <string name="default_notification_channel_name">LocalA Player</string>
   <string name="media3_controls_play_description">Play track</string>
   <string name="media3_controls_pause_description">Pause track</string>
   <string name="media3_controls_seek_to_previous_description">Previous track</string>

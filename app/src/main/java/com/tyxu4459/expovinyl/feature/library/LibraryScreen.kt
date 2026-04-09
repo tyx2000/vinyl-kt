@@ -1,5 +1,10 @@
 package com.tyxu4459.expovinyl.feature.library
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -40,10 +45,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tyxu4459.expovinyl.model.PlaylistSummary
@@ -219,10 +226,35 @@ fun LibraryRoute(
   viewModel: LibraryViewModel = hiltViewModel(),
 ) {
   val state = viewModel.uiState.collectAsStateWithLifecycle()
+  val context = LocalContext.current
+  val mediaPermission =
+    if (Build.VERSION.SDK_INT >= 33) {
+      Manifest.permission.READ_MEDIA_AUDIO
+    } else {
+      Manifest.permission.READ_EXTERNAL_STORAGE
+    }
+  val permissionLauncher =
+    rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+      if (granted) {
+        viewModel.scanDeviceAudioToAlbums()
+      }
+    }
   LibraryScreen(
     state = state.value,
     onPlaylistClick = onPlaylistClick,
     onCreatePlaylist = viewModel::createPlaylist,
+    onScanDeviceAudio = {
+      if (
+        ContextCompat.checkSelfPermission(
+          context,
+          mediaPermission,
+        ) == PackageManager.PERMISSION_GRANTED
+      ) {
+        viewModel.scanDeviceAudioToAlbums()
+      } else {
+        permissionLauncher.launch(mediaPermission)
+      }
+    },
     onDeletePlaylist = viewModel::removePlaylist,
     modifier = modifier,
   )
@@ -234,6 +266,7 @@ fun LibraryScreen(
   state: LibraryUiState,
   onPlaylistClick: (String) -> Unit,
   onCreatePlaylist: (String) -> Unit,
+  onScanDeviceAudio: () -> Unit,
   onDeletePlaylist: (String) -> Unit,
   modifier: Modifier = Modifier,
 ) {
@@ -249,7 +282,7 @@ fun LibraryScreen(
         TopAppBar(
           title = {
             Text(
-              text = "Vinyl",
+              text = "LocalA",
               style = MaterialTheme.typography.headlineSmall,
             )
           },
@@ -262,7 +295,16 @@ fun LibraryScreen(
             ),
           actions = {
             FilledTonalButton(
+              onClick = onScanDeviceAudio,
+              enabled = !state.isScanning,
+              modifier = Modifier.padding(end = 8.dp),
+              shape = RoundedCornerShape(18.dp),
+            ) {
+              Text(if (state.isScanning) "Scanning" else "Scan")
+            }
+            FilledTonalButton(
               onClick = { dialogVisible = true },
+              enabled = !state.isScanning,
               modifier = Modifier.padding(end = 12.dp),
               shape = RoundedCornerShape(18.dp),
             ) {
